@@ -26,7 +26,7 @@ class Program
         {
             using (Bitmap Screenshot = TakeScreenshot())
             {
-                using MemoryStream BmpStream = new MemoryStream();
+                using MemoryStream ImgStream = new MemoryStream();
 
                 var EncoderParameters = new EncoderParameters(1);
                 EncoderParameters.Param[0] = new EncoderParameter(Encoder.Quality, 80L); ;
@@ -38,15 +38,15 @@ class Program
                     throw new InvalidOperationException("JPEG codec is not found");
                 }
 
-                Screenshot.Save(BmpStream, codecInfo, EncoderParameters);
-                BmpStream.Seek(0, SeekOrigin.Begin);
+                Screenshot.Save(ImgStream, codecInfo, EncoderParameters);
+                ImgStream.Seek(0, SeekOrigin.Begin);
 
-                long BmpSize = BmpStream.Length;
+                long BmpSize = ImgStream.Length;
                 byte[] ImgSize = BitConverter.GetBytes(BmpSize);
 
                 Writer.Write(ImgSize, 0, 4);
-                BmpStream.Seek(0, SeekOrigin.Begin);
-                while ((BytesRead = BmpStream.Read(Buffer, 0, Buffer.Length)) > 0)
+                ImgStream.Seek(0, SeekOrigin.Begin);
+                while ((BytesRead = ImgStream.Read(Buffer, 0, Buffer.Length)) > 0)
                 {
                     Writer.Write(Buffer, 0, BytesRead);
                 }
@@ -69,6 +69,7 @@ class Program
     {
         return WinAPIModule.TakeScreenshot();
     }
+
     static int WaitForResponse(ref NetworkStream Stream)
     {
         byte[] Buffer = new byte[1];
@@ -76,7 +77,6 @@ class Program
         return BytesRead;
     }
 }
-
 class WinAPIModule
 {
     [DllImport("user32.dll")]

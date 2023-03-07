@@ -53,7 +53,7 @@ class Program
                         using (MemoryStream ImageStream = new MemoryStream(Buffer))
                         {
                             Bitmap Screenshot = new Bitmap(ImageStream);
-                            //Screenshot.Save("test.jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+                            Screenshot.Save("test.jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
                             Screenshot.Dispose();
                             Writer.Write(1);
                             FPS++;
@@ -75,7 +75,7 @@ class Program
 
     static void TimerElapsed(object Sender, ElapsedEventArgs E)
     {
-        Console.WriteLine("FPS: {1}\n{0} Kb/s", FPS, BytesPerSecond / 1024);
+        Console.WriteLine("FPS: {0}\n{1} Kb/s", FPS, BytesPerSecond / 1024);
         BytesPerSecond = 0;
         FPS = 0;
     }
