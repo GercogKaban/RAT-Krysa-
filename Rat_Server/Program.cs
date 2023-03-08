@@ -6,7 +6,13 @@ using System.IO;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Timers;
+using Protocol;
 
+[Serializable]
+class Test
+{
+    public int a;
+}
 class Program
 {
     static Task Main(string[] args)
@@ -20,45 +26,49 @@ class Program
             Console.WriteLine("Client connected");
             using NetworkStream Stream = Client.GetStream();
 
-            using BinaryWriter Writer = new BinaryWriter(Stream);
-            using MemoryStream BmpStream = new MemoryStream();
+            //using BinaryWriter Writer = new BinaryWriter(Stream);
+            //using MemoryStream BmpStream = new MemoryStream();
 
-            byte[] SizeBytes = new byte[4];
+            //byte[] SizeBytes = new byte[4];
 
-            using Timer StatTimer = new Timer(1000);
-            StatTimer.Elapsed += TimerElapsed;
-            StatTimer.Start();
+            //using Timer StatTimer = new Timer(1000);
+            //StatTimer.Elapsed += TimerElapsed;
+            //StatTimer.Start();
+
+            TCPProtocolLL<Test> TCPProtocol = new TCPProtocolLL<Test>(Client);
 
             try
             {
                 while (Client.Connected)
                 {
-                    Stream.Read(SizeBytes, 0, 4);
-                    int ImageSize = BitConverter.ToInt32(SizeBytes, 0);
-                    int BytesRead = 0;
-                    byte[] Buffer = new byte[ImageSize];
-                    while (BytesRead < ImageSize)
-                    {
-                        int ChunkSize = Stream.Read(Buffer, BytesRead, ImageSize - BytesRead);
-                        if (ChunkSize == 0)
-                        {
-                            break;
-                        }
-                        BytesRead += ChunkSize;
-                        BytesPerSecond += ChunkSize;
-                    }
+                    Test Package = TCPProtocol.ReceivePackage().Result;
+                    Console.Out.WriteLine(Package?.a.ToString());
+                    //Stream.Read(SizeBytes, 0, 4);
+                    //int ImageSize = BitConverter.ToInt32(SizeBytes, 0);
+                    //int BytesRead = 0;
+                    //byte[] Buffer = new byte[ImageSize];
+                    //while (BytesRead < ImageSize)
+                    //{
+                    //    int ChunkSize = Stream.Read(Buffer, BytesRead, ImageSize - BytesRead);
+                    //    if (ChunkSize == 0)
+                    //    {
+                    //        break;
+                    //    }
+                    //    BytesRead += ChunkSize;
+                    //    BytesPerSecond += ChunkSize;
+                    //}
 
-                    if (ImageSize != 0)
-                    {
-                        using (MemoryStream ImageStream = new MemoryStream(Buffer))
-                        {
-                            Bitmap Screenshot = new Bitmap(ImageStream);
-                            Screenshot.Save("test.jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
-                            Screenshot.Dispose();
-                            Writer.Write(1);
-                            FPS++;
-                        }
-                    }
+                    //if (ImageSize != 0)
+                    //{
+                    //    using (MemoryStream ImageStream = new MemoryStream(Buffer))
+                    //    {
+                    //        Bitmap Screenshot = new Bitmap(ImageStream);
+                    //        Screenshot.Save("test.jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+                    //        Screenshot.Dispose();
+                    //        Writer.Write(1);
+                    //        FPS++;
+                    //    }
+                    //}
                 }
             }
 
