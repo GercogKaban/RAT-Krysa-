@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Diagnostics;
 using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text;
 
 namespace Protocol
 {
@@ -38,29 +41,31 @@ namespace Protocol
         public TCPProtocolLL(TcpClient Client)
         {
             this.Client = Client;
+            Stream = Client.GetStream();
         }
 
         public async Task<bool> SendPackage(T Package)
         {
-            return await SendData(Util.Serialize(Package), true);
+            return await SendData(Util.Serialize(Package), false);
         }
 
         public async Task<T> ReceivePackage()
         {
+            IsReceivingPackage_ = true;
             byte[] Data = await ReceiveData();
             T Package = Util.Deserialize<T>(Data);
+            IsReceivingPackage_ = false;
             return Package;
         }
         private async Task<bool> SendData(byte[] Data, bool Compression)
         {
-            if (!Client.Connected || Data.Length == 0)
+            try 
             {
-                throw new ArgumentException("Client is not connected or data is empty.");
-            }
+                if (!Client.Connected || Data.Length == 0)
+                {
+                    throw new ArgumentException("Client is not connected or data is empty.");
+                }
 
-            else
-            {
-                Stream = Client.GetStream();
                 using BinaryWriter Writer = new BinaryWriter(Stream);
 
                 byte[] NewData = Compression ? Util.CompressData(Data) : Data;
@@ -73,54 +78,51 @@ namespace Protocol
                 };
 
                 byte[] DataHeaderBytes = Util.StructToBytes(DataHeader);
-                using (MemoryStream stream = new MemoryStream())
+                using (MemoryStream MemStream = new MemoryStream())
                 {
-                    stream.Write(DataHeaderBytes, 0, DataHeaderBytes.Length);
-                    stream.Write(NewData, 0, NewData.Length);
-                    byte[] DataBuffer = stream.ToArray();
+                    MemStream.Write(DataHeaderBytes, 0, DataHeaderBytes.Length);
+                    MemStream.Write(NewData, 0, NewData.Length);
+                    byte[] DataBuffer = MemStream.ToArray();
                     await AsyncSend(DataBuffer);
                 }
+
+                return true;
             }
-            return true;
+
+            catch (Exception ex)
+            {
+                System.Console.WriteLine(ex.Message);
+                return false;
+            }
         }
 
         private async Task<byte[]> ReceiveData()
         {
-            await ReceiveSemaphore.WaitAsync();
-
-            try
+            if (CurrentHeader.PackageNum == 0)
             {
-                Stream = Client.GetStream();
-                if (CurrentHeader.PackageNum == 0)
-                {
-                    byte[] HeaderBuffer = new byte[Marshal.SizeOf(typeof(Header))];
-                    int temp = await Stream.ReadAsync(HeaderBuffer);
-                    Console.WriteLine(temp.ToString());
-                    CurrentHeader = Util.BytesToStruct<Header>(HeaderBuffer);
-                    CurrentBytesRead = 0;
-                }
-
-                if (CurrentHeader.DataLength != 0)
-                {
-                    byte[] Buffer = new byte[CurrentHeader.DataLength];
-                    while (CurrentBytesRead < CurrentHeader.DataLength)
-                    {
-                        Int32 ChunkSize =
-                            await Stream.ReadAsync(Buffer, CurrentBytesRead, CurrentHeader.DataLength - CurrentBytesRead);
-
-                        if (ChunkSize == 0)
-                        {
-                            break;
-                        }
-                        CurrentBytesRead += ChunkSize;
-                    }
-                    return Buffer;
-                }
+                byte[] HeaderBuffer = new byte[Marshal.SizeOf(typeof(Header))];
+                int temp = await Stream.ReadAsync(HeaderBuffer);
+                Console.WriteLine(temp.ToString());
+                CurrentHeader = Util.BytesToStruct<Header>(HeaderBuffer);
+                CurrentBytesRead = 0;
             }
 
-            finally
+            if (CurrentHeader.DataLength != 0)
             {
-                ReceiveSemaphore.Release();
+                byte[] Buffer = new byte[CurrentHeader.DataLength];
+                while (CurrentBytesRead < CurrentHeader.DataLength)
+                {
+                    Int32 ChunkSize =
+                        await Stream.ReadAsync(Buffer, CurrentBytesRead, CurrentHeader.DataLength - CurrentBytesRead);
+
+                    if (ChunkSize == 0)
+                    {
+                        break;
+                    }
+                    CurrentBytesRead += ChunkSize;
+                }
+                CurrentHeader = default(Header);
+                return Buffer;
             }
             return default(byte[]);
         }
@@ -141,9 +143,16 @@ namespace Protocol
         NetworkStream Stream;
         Int32 PackageNum = 0;
         Int32 CurrentBytesRead = 0;
-        //SemaphoreSlim SendSemaphore = new SemaphoreSlim(1);
-        SemaphoreSlim ReceiveSemaphore = new SemaphoreSlim(1);
         Header CurrentHeader = new Header();
+        bool IsReceivingPackage_ = false;
+
+        public bool IsReceivingPackage
+        {
+            get 
+            {
+                return IsReceivingPackage_;
+            }
+        }
     }
 
     class Util
@@ -176,59 +185,29 @@ namespace Protocol
 
         static public byte[] Serialize<T>(in T InObject)
         {
-            try
+            if (InObject == null)
             {
-                BinaryFormatter Formatter = new BinaryFormatter();
-                using (MemoryStream Stream = new MemoryStream())
-                {
-                    Formatter.Serialize(Stream, InObject);
-                    return Stream.ToArray();
-                }
+                throw new ArgumentNullException(nameof(InObject));
             }
 
-            catch (SerializationException ex)
-            {
-                Console.WriteLine("Error during serialization: {0}", ex.Message);
-                return default(byte[]);
-            }
-        }
-
-        static public byte[] Serialize(Header InHeader)
-        {
             try
             {
-                BinaryFormatter formatter = new BinaryFormatter();
-                using (MemoryStream stream = new MemoryStream())
-                {
-                    formatter.Serialize(stream, InHeader);
-                    return stream.ToArray();
-                }
+                string JsonStr = JsonConvert.SerializeObject(InObject);
+                return Encoding.UTF8.GetBytes(JsonStr);
             }
-            catch (SerializationException ex)
+
+            catch (Exception ex)
             {
-                Console.WriteLine("Error during serialization: {0}", ex.Message);
-                return default(byte[]);
+                System.Console.WriteLine(ex.Message);
+                // Log or handle the exception
+                throw ex; 
             }
         }
 
         static public T Deserialize<T>(byte[] Data)
         {
-            try
-            {
-                BinaryFormatter Formatter = new BinaryFormatter();
-
-                using (MemoryStream Stream = new MemoryStream(Data))
-                {
-                    T Result = (T)Formatter.Deserialize(Stream);
-                    return Result;
-                }
-            }
-
-            catch (SerializationException ex)
-            {
-                Console.WriteLine("Error during deserialization: {0}", ex.Message);
-                return default(T);
-            }
+            string JsonStr = Encoding.UTF8.GetString(Data);
+            return JsonConvert.DeserializeObject<T>(JsonStr);
         }
 
         public static byte[] StructToBytes<T>(T obj) where T : struct

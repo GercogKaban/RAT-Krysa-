@@ -9,71 +9,46 @@ using System.Threading;
 using System.Net;
 using System.IO;
 using Protocol;
+using System.Threading.Tasks;
+
 
 [Serializable]
 class Test
 {
-    public static int a;
+    public int A { get; set; }
 }
 class Program
 {
-    static void Main(string[] args)
+    static async Task<int> Main(string[] args)
     {
         //WinAPIModule.hookId = WinAPIModule.SetHook(WinAPIModule.HookCallback);
 
-        TcpClient Client = new TcpClient("localhost", 8888);
+        using TcpClient Client = new TcpClient("localhost", 8888);
         TCPProtocolLL<Test> TCPProtocol = new TCPProtocolLL<Test>(Client);
-        //NetworkStream Stream = Client.GetStream();
-        //using BinaryWriter Writer = new BinaryWriter(Stream);
-
-        //byte[] Buffer = new byte[2048];
-        //int BytesRead;
-
-        while (true)
+        Random Rand = new Random();
+        while (Client.Connected)
         {
             Test TestPackage = new Test();
-            Test.a++;
+            TestPackage.A = Rand.Next(0, 100);
+            await SendPackage(Client, TCPProtocol, TestPackage);
+        }
+        Client.Close();
+        return 0;
+    }
 
-            TCPProtocol.SendPackage(TestPackage);
-            //using (Bitmap Screenshot = TakeScreenshot())h
-            //{
-            //    using MemoryStream ImgStream = new MemoryStream();
-
-            //    var EncoderParameters = new EncoderParameters(1);
-            //    EncoderParameters.Param[0] = new EncoderParameter(Encoder.Quality, 80L); ;
-            //    var codecInfo = ImageCodecInfo.GetImageDecoders()
-            //        .FirstOrDefault(codec => codec.FormatID == ImageFormat.Jpeg.Guid);
-
-            //    if (codecInfo == null)
-            //    {
-            //        throw new InvalidOperationException("JPEG codec is not found");
-            //    }
-
-            //    Screenshot.Save(ImgStream, codecInfo, EncoderParameters);
-            //    ImgStream.Seek(0, SeekOrigin.Begin);
-
-            //    long BmpSize = ImgStream.Length;
-            //    byte[] ImgSize = BitConverter.GetBytes(BmpSize);
-
-            //    Writer.Write(ImgSize, 0, 4);
-            //    ImgStream.Seek(0, SeekOrigin.Begin);
-            //    while ((BytesRead = ImgStream.Read(Buffer, 0, Buffer.Length)) > 0)
-            //    {
-            //        Writer.Write(Buffer, 0, BytesRead);
-            //    }
-            //}
-            //Writer.Flush();
-            //WaitForResponse(ref Stream);
+    static async Task<bool> SendPackage<Test>(TcpClient Client, TCPProtocolLL<Test> TCPProtocol, Test Package)
+    {
+        try
+        {
+            TCPProtocol.SendPackage(Package);
+            return true;
         }
 
-        //UnhookWindowsHookEx(hookId);
-
-        //Writer.Dispose();
-        //Writer.Close();
-        //Stream.Dispose();
-        //Stream.Close();
-        //Client.Dispose();
-        //Client.Close();
+        catch (Exception ex)
+        {
+            System.Console.WriteLine(ex.Message);
+            return false;
+        }
     }
 
     //static Bitmap TakeScreenshot()

@@ -41,34 +41,14 @@ class Program
             {
                 while (Client.Connected)
                 {
-                    Test Package = TCPProtocol.ReceivePackage().Result;
-                    Console.Out.WriteLine(Package?.a.ToString());
-                    //Stream.Read(SizeBytes, 0, 4);
-                    //int ImageSize = BitConverter.ToInt32(SizeBytes, 0);
-                    //int BytesRead = 0;
-                    //byte[] Buffer = new byte[ImageSize];
-                    //while (BytesRead < ImageSize)
-                    //{
-                    //    int ChunkSize = Stream.Read(Buffer, BytesRead, ImageSize - BytesRead);
-                    //    if (ChunkSize == 0)
-                    //    {
-                    //        break;
-                    //    }
-                    //    BytesRead += ChunkSize;
-                    //    BytesPerSecond += ChunkSize;
-                    //}
-
-                    //if (ImageSize != 0)
-                    //{
-                    //    using (MemoryStream ImageStream = new MemoryStream(Buffer))
-                    //    {
-                    //        Bitmap Screenshot = new Bitmap(ImageStream);
-                    //        Screenshot.Save("test.jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
-                    //        Screenshot.Dispose();
-                    //        Writer.Write(1);
-                    //        FPS++;
-                    //    }
-                    //}
+                    if (!TCPProtocol.IsReceivingPackage)
+                    {
+                        Test Package = TCPProtocol.ReceivePackage().Result;
+                        if (Package != null)
+                        {
+                            Console.Out.WriteLine(Package.a.ToString());
+                        }
+                    }
                 }
             }
 

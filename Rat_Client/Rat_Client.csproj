@@ -7,6 +7,9 @@
 		<StartupObject />
 	</PropertyGroup>
 	<ItemGroup>
+	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	</ItemGroup>
+	<ItemGroup>
 	  <Reference Include="Protocol">
 	    <HintPath>..\Protocol\Protocol\bin\Debug\net5.0\Protocol.dll</HintPath>
 	  </Reference>
