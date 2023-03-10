@@ -40,9 +40,20 @@ namespace Protocol
     {
         public TCPProtocolLL(TcpClient Client)
         {
+            unsafe 
+            {
+                var val = Client.SendBufferSize;
+                var ptr = &val;
+            }
             this.Client = Client;
             Stream = Client.GetStream();
         }
+
+        //public TCPProtocolLL(TcpClient Client)
+        //{
+        //    this.Client = Client;
+        //    Stream = Client.GetStream();
+        //}
 
         public async Task<bool> SendPackage(T Package)
         {
@@ -59,7 +70,7 @@ namespace Protocol
         }
         private async Task<bool> SendData(byte[] Data, bool Compression)
         {
-            try 
+            try
             {
                 if (!Client.Connected || Data.Length == 0)
                 {
@@ -94,7 +105,7 @@ namespace Protocol
                 System.Console.WriteLine(ex.Message);
                 return false;
             }
-        }
+}
 
         private async Task<byte[]> ReceiveData()
         {

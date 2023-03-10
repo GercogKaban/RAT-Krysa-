@@ -24,7 +24,7 @@ class Program
         {
             using TcpClient Client = Server.AcceptTcpClient();
             Console.WriteLine("Client connected");
-            using NetworkStream Stream = Client.GetStream();
+            //using NetworkStream Stream = Client.GetStream();
 
             //using BinaryWriter Writer = new BinaryWriter(Stream);
             //using MemoryStream BmpStream = new MemoryStream();

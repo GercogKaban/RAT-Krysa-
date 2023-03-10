@@ -17,38 +17,34 @@ class Test
 {
     public int A { get; set; }
 }
+
 class Program
 {
     static async Task<int> Main(string[] args)
     {
         //WinAPIModule.hookId = WinAPIModule.SetHook(WinAPIModule.HookCallback);
 
-        using TcpClient Client = new TcpClient("localhost", 8888);
-        TCPProtocolLL<Test> TCPProtocol = new TCPProtocolLL<Test>(Client);
-        Random Rand = new Random();
-        while (Client.Connected)
+        TcpClient Client = new TcpClient();
         {
-            Test TestPackage = new Test();
-            TestPackage.A = Rand.Next(0, 100);
-            await SendPackage(Client, TCPProtocol, TestPackage);
+            Client.Connect("localhost", 8888);
+
+            unsafe
+            {
+                var val = Client.SendBufferSize;
+                var ptr = &val;
+            }
+            TCPProtocolLL<Test> TCPProtocol = new TCPProtocolLL<Test>(Client);
+            Random Rand = new Random();
+            while (Client.Connected)
+            {
+                Test TestPackage = new Test();
+                TestPackage.A = Rand.Next(0, 100);
+                await TCPProtocol.SendPackage(TestPackage);
+            }
+            Client.Close();
         }
-        Client.Close();
+           
         return 0;
-    }
-
-    static async Task<bool> SendPackage<Test>(TcpClient Client, TCPProtocolLL<Test> TCPProtocol, Test Package)
-    {
-        try
-        {
-            TCPProtocol.SendPackage(Package);
-            return true;
-        }
-
-        catch (Exception ex)
-        {
-            System.Console.WriteLine(ex.Message);
-            return false;
-        }
     }
 
     //static Bitmap TakeScreenshot()
